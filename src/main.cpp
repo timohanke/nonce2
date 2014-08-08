@@ -1895,10 +1895,11 @@ void static UpdateTip(CBlockIndex *pindexNew) {
     // New best block
     nTimeBestReceived = GetTime();
     mempool.AddTransactionsUpdated(1);
-
-    LogPrintf("UpdateTip: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s progress=%f\n",
+    LogPrintf("UpdateTip: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s block.nVersion=%u block.nNonce2=%u progress=%f\n",
       chainActive.Tip()->GetBlockHash().ToString(), chainActive.Height(), log(chainActive.Tip()->nChainWork.getdouble())/log(2.0), (unsigned long)chainActive.Tip()->nChainTx,
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", chainActive.Tip()->GetBlockTime()),
+      chainActive.Tip()->nVersion,
+	  chainActive.Tip()->nNonce2,      
       Checkpoints::GuessVerificationProgress(chainActive.Tip()));
 
     cvBlockChange.notify_all();
@@ -2462,6 +2463,11 @@ bool AcceptBlockHeader(CBlockHeader& block, CValidationState& state, CBlockIndex
         if (pcheckpoint && nHeight < pcheckpoint->nHeight)
             return state.DoS(100, error("AcceptBlock() : forked chain older than last checkpoint (height %d)", nHeight));
 
+		// Reject nNonce2 15th bit set until we decide to hardfork and re-enable the use of this bit.
+		if (block.nNonce2 & 0x8000)
+			return state.Invalid(error("AcceptBlock() : rejected nNonce 15th-bit set"),
+                                 REJECT_INVALID, "bad-nNonce2");			
+								 
         // Reject block.nVersion=1 blocks when 95% (75% on testnet) of the network has upgraded:
         if (block.nVersion < 2 && 
             CBlockIndex::IsSuperMajority(2, pindexPrev, Params().RejectBlockOutdatedMajority()))
@@ -2539,7 +2545,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
     return true;
 }
 
-bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned int nRequired)
+bool CBlockIndex::IsSuperMajority(unsigned short minVersion, const CBlockIndex* pstart, unsigned int nRequired)
 {
     unsigned int nToCheck = Params().ToCheckBlockUpgradeMajority();
     unsigned int nFound = 0;
@@ -3103,6 +3109,12 @@ bool LoadBlockIndex()
     return true;
 }
 
+void ResetBlockIndex()
+{
+	 nLastBlockFile = 0;
+	 infoLastBlockFile.SetNull();
+	 nBlockSequenceId = 1;
+}
 
 bool InitBlockIndex() {
     LOCK(cs_main);

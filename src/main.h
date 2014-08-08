@@ -702,7 +702,8 @@ public:
     unsigned int nStatus;
 
     // block header
-    int nVersion;
+    unsigned short nVersion;
+    unsigned short nNonce2;
     uint256 hashMerkleRoot;
     unsigned int nTime;
     unsigned int nBits;
@@ -727,6 +728,7 @@ public:
         nSequenceId = 0;
 
         nVersion       = 0;
+        nNonce2         = 0;
         hashMerkleRoot = 0;
         nTime          = 0;
         nBits          = 0;
@@ -743,6 +745,7 @@ public:
         SetNull();
 
         nVersion       = block.nVersion;
+        nNonce2         = block.nNonce2;
         hashMerkleRoot = block.hashMerkleRoot;
         nTime          = block.nTime;
         nBits          = block.nBits;
@@ -771,6 +774,7 @@ public:
     {
         CBlockHeader block;
         block.nVersion       = nVersion;
+        block.nNonce2         = nNonce2;
         if (pprev)
             block.hashPrevBlock = pprev->GetBlockHash();
         block.hashMerkleRoot = hashMerkleRoot;
@@ -826,7 +830,7 @@ public:
      * in the last Params().ToCheckBlockUpgradeMajority() blocks, starting at pstart 
      * and going backwards.
      */
-    static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart,
+    static bool IsSuperMajority(unsigned short minVersion, const CBlockIndex* pstart,
                                 unsigned int nRequired);
 
     std::string ToString() const
@@ -904,6 +908,7 @@ public:
 
         // block header
         READWRITE(this->nVersion);
+        READWRITE(this->nNonce2);
         READWRITE(hashPrev);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
@@ -915,6 +920,7 @@ public:
     {
         CBlockHeader block;
         block.nVersion        = nVersion;
+        block.nNonce2          = nNonce2;
         block.hashPrevBlock   = hashPrev;
         block.hashMerkleRoot  = hashMerkleRoot;
         block.nTime           = nTime;
